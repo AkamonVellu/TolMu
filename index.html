@@ -261,7 +261,7 @@
   <div class="masthead">
     <div class="name">ILTA-<span>VASKOOLI</span></div>
     <div class="strip">
-      <span>Yötön yö · Rovaniemi</span><span>★</span><span>Juhannus 2026</span><span>★</span><span>Hinta: 0 € (läppä)</span>
+      <span>Yötön yö · Rovaniemi</span><span>★</span><span>Kultavaskooli 2026</span><span>★</span><span>Hinta: 0 € (läppä)</span>
     </div>
   </div>
 
@@ -351,7 +351,7 @@
     </section>
 
     <footer>
-      <div>Ilta-Vaskooli · TolMu-toimitus · Juhannus 2026</div>
+      <div>Ilta-Vaskooli · TolMu-toimitus · Kultavaskooli 2026</div>
       <div class="disclaimer">*Ei oikeasti tieteellisesti todistettu. Tulos on aina Timo – koska TolMu ei lähde ilman Timoa. Tehty rakkaudella (ja vähän kiusalla) kaveriporukan kesken.</div>
     </footer>
 
@@ -453,14 +453,48 @@
   const frame = document.getElementById("frame");
   const cap = document.getElementById("cap");
 
-  function showHeila(i){
-    const src = HEILAT.length ? HEILAT[i % HEILAT.length] : null;
+  /* Esilataa kandidaattikuvat heti sivun auettua (käyttäjä ehtii vastailla
+     kysymyksiin sillä aikaa), ja säilytä vain ne jotka oikeasti latautuivat.
+     Näin karuselli näyttää kuvat välittömästi välimuistista – ei latauskisaa. */
+  let readyHeilat = [];
+  let preloadStarted = false;
+  let preloadDone = false;
+  const preloadCbs = [];
+
+  function flushPreloadCbs(){ while(preloadCbs.length) preloadCbs.shift()(); }
+
+  function preloadHeilat(cb){
+    if(preloadDone){ if(cb) cb(); return; }
+    if(cb) preloadCbs.push(cb);
+    if(preloadStarted) return;              // lataus jo käynnissä; cb jonossa
+    preloadStarted = true;
+    let pending = HEILAT.length;
+    if(pending === 0){ preloadDone = true; flushPreloadCbs(); return; }
+    HEILAT.forEach(src => {
+      const im = new Image();
+      const done = (ok) => {
+        if(ok) readyHeilat.push(src);
+        if(--pending === 0){ preloadDone = true; flushPreloadCbs(); }
+      };
+      im.onload = () => done(true);
+      im.onerror = () => done(false);
+      im.src = src;
+    });
+  }
+  preloadHeilat();   // käynnistä taustalla heti
+
+  /* Yksi pysyvä kuvaelementti kehyksen sisällä; vaihdetaan vain sen src. */
+  function setFrame(src){
     if(!src){ frame.innerHTML = SILHOUETTE; return; }
-    const img = new Image();
-    img.alt = "Salaperäinen kandidaatti";
-    img.onload = () => { frame.innerHTML = ""; frame.appendChild(img); };
-    img.onerror = () => { frame.innerHTML = SILHOUETTE; };
-    img.src = src;
+    let img = frame.querySelector("img.heila-img");
+    if(!img){
+      frame.innerHTML = "";
+      img = document.createElement("img");
+      img.className = "heila-img";
+      img.alt = "Salaperäinen kandidaatti";
+      frame.appendChild(img);
+    }
+    img.src = src;   // välimuistista -> näkyy heti
   }
 
   const stage = document.getElementById("stage");
@@ -476,21 +510,24 @@
     hero.style.display = "none";
     stage.classList.add("on");
     stage.scrollIntoView({behavior:"smooth", block:"center"});
-    runCarousel();
+    setFrame(null);                 // siluetti odotuksen ajaksi (jos vielä lataa)
+    preloadHeilat(() => runCarousel());
   });
 
   function runCarousel(){
+    const pool = readyHeilat;       // vain onnistuneesti ladatut kuvat
     if(reduceMotion){ finish(); return; }
     let i = 0, ticks = 0;
     const totalTicks = 14;          // kuinka monta vaihtoa ennen paljastusta
     let delay = 120;                // aloitusnopeus (ms)
-    showHeila(0);
+    const pick = (k) => pool.length ? pool[k % pool.length] : null;
+    setFrame(pick(0));
     cap.textContent = CAPS[0];
 
     function step(){
       ticks++;
       i++;
-      showHeila(i);
+      setFrame(pick(i));
       cap.textContent = CAPS[i % CAPS.length];
       delay = 120 + ticks * ticks * 2.2;     // hidastuu loppua kohti (kohti rummun pärinää)
       if(ticks >= totalTicks){ setTimeout(finish, 520); return; }

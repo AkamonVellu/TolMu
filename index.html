@@ -518,8 +518,8 @@
     const pool = readyHeilat;       // vain onnistuneesti ladatut kuvat
     if(reduceMotion){ finish(); return; }
     let i = 0, ticks = 0;
-    const totalTicks = 14;          // kuinka monta vaihtoa ennen paljastusta
-    let delay = 120;                // aloitusnopeus (ms)
+    const totalTicks = 22;          // kuinka monta vaihtoa ennen paljastusta
+    let delay = 95;                 // aloitusnopeus (ms)
     const pick = (k) => pool.length ? pool[k % pool.length] : null;
     setFrame(pick(0));
     cap.textContent = CAPS[0];
@@ -529,8 +529,8 @@
       i++;
       setFrame(pick(i));
       cap.textContent = CAPS[i % CAPS.length];
-      delay = 120 + ticks * ticks * 2.2;     // hidastuu loppua kohti (kohti rummun pärinää)
-      if(ticks >= totalTicks){ setTimeout(finish, 520); return; }
+      delay = 95 + ticks * ticks * 1.5;     // hidastuu loppua kohti (kohti rummun pärinää)
+      if(ticks >= totalTicks){ cap.textContent = "Ja se on…"; setTimeout(finish, 1200); return; }
       timer = setTimeout(step, delay);
     }
     timer = setTimeout(step, delay);
